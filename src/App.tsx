@@ -34,6 +34,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const activeIdRef = useRef<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   activeIdRef.current = activeQuizId;
 
   const activeQuiz = quizzes.find((q) => q.id === activeQuizId) || quizzes[0];
@@ -250,8 +251,19 @@ export default function App() {
                   <button onClick={() => setTeacherTab('create')} className="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
                     Concevoir une épreuve
                   </button>
-                  <button onClick={handleImportInterro} className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg">
-                    Importer « Numération » (3 groupes)
+                  <input
+                    ref={importFileRef}
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) handleImportInterro(f);
+                    }}
+                  />
+                  <button onClick={() => importFileRef.current?.click()} className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg">
+                    Importer un fichier d'interrogation (JSON)
                   </button>
                   <button onClick={handleCreateDemo} className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg">
                     Charger l'exemple
