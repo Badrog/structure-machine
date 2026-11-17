@@ -14,7 +14,7 @@ interface ExamGuardProps {
 
 const REASONS: Record<ViolationType, string> = {
   blur: "Vous avez quitté la fenêtre de l'épreuve (autre application, autre onglet ou fenêtre).",
-  hidden: "L'onglet de l'épreuve a été masqué ou réduit.",
+  hidden: "L'onglet de l'épreuve a été masqué ou réduit, ou l'écran / l'application a été mis en veille.",
   screenshot: "Une capture d'écran a été détectée.",
   print: "Une impression de la page a été détectée.",
 };
@@ -68,7 +68,22 @@ export const ExamGuard: React.FC<ExamGuardProps> = ({ auth, enabled, lockMinutes
     if (!enabled) return;
 
     const onBlur = () => trigger('blur');
-    const onVisibility = () => { if (document.hidden) trigger('hidden'); };
+    // Écran éteint / application en arrière-plan sur téléphone : selon le navigateur, seul l'un de ces
+    // événements (ou aucun) est émis. On les écoute tous, et on contrôle aussi au retour de la veille.
+    let hiddenSeen = false;
+    const onVisibility = () => {
+      if (document.hidden) { hiddenSeen = true; trigger('hidden'); }
+      else if (hiddenSeen) { hiddenSeen = false; trigger('hidden'); } // retour : le blocage n'avait pas pu être posé
+    };
+    const onPageHide = () => { hiddenSeen = true; trigger('hidden'); };
+    // Filet de sécurité : si la page a été « gelée » (écran éteint), les minuteurs s'arrêtent. Au réveil,
+    // l'écart entre deux battements (1 s) dépasse largement 5 s => on bloque.
+    let lastTick = Date.now();
+    const heartbeat = setInterval(() => {
+      const t = Date.now();
+      if (t - lastTick > 5000) trigger('hidden');
+      lastTick = t;
+    }, 1000);
     const onBeforePrint = () => trigger('print');
     const onKey = (e: KeyboardEvent) => {
       // Windows : PrintScreen, Win+Shift+S (Outil Capture) — macOS : Cmd+Shift+3/4/5
@@ -80,6 +95,8 @@ export const ExamGuard: React.FC<ExamGuardProps> = ({ auth, enabled, lockMinutes
 
     window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('freeze', onPageHide);
     window.addEventListener('beforeprint', onBeforePrint);
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('keyup', onKey, true);
@@ -89,6 +106,9 @@ export const ExamGuard: React.FC<ExamGuardProps> = ({ auth, enabled, lockMinutes
     return () => {
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('freeze', onPageHide);
+      clearInterval(heartbeat);
       window.removeEventListener('beforeprint', onBeforePrint);
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('keyup', onKey, true);
