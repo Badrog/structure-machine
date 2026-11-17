@@ -1,0 +1,6 @@
+{
+  "name": "Evalis - Plateforme d'Interrogations & Suivi en Temps Réel",
+  "description": "Plateforme d'évaluation pédagogique pour concevoir des interrogations interactives et analyser les scores des étudiants en temps réel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
